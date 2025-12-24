@@ -1351,8 +1351,11 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
     if (!final()) return 0
     if (!props.message.time.completed) return 0
     if (!Flag.OPENCODE_EXPERIMENTAL_TPS) return 0
+    const assistantMessages: AssistantMessage[] = messages().filter(
+      (msg) => msg.role === "assistant" && msg.id !== props.message.id,
+    ) as AssistantMessage[]
 
-    const allParts = getParts(props.message.id)
+    const allParts = assistantMessages.flatMap((msg) => getParts(msg.id))
 
     const INVALID_REASONING_TEXTS = ["[REDACTED]", "", null, undefined] as const
 
@@ -1389,9 +1392,16 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
     }
 
     if (totalStreamingTimeMs === 0) return 0
+    const totals = assistantMessages.reduce(
+      (acc, m) => {
+        acc.output += m.tokens.output
+        if (hasValidReasoning) acc.reasoning += m.tokens.reasoning
+        return acc
+      },
+      { output: 0, reasoning: 0 },
+    )
 
-    // Only count reasoning tokens if valid reasoning exists
-    const totalTokens = (hasValidReasoning ? props.message.tokens.reasoning : 0) + props.message.tokens.output
+    const totalTokens = totals.reasoning + totals.output
 
     if (totalTokens === 0) return 0
 
