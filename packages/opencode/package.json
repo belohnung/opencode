@@ -136,6 +136,7 @@
     "tree-sitter-bash": "0.25.0",
     "turndown": "7.2.0",
     "ulid": "catalog:",
+    "vader-sentiment": "1.1.3",
     "vscode-jsonrpc": "8.2.1",
     "web-tree-sitter": "0.25.10",
     "which": "6.0.1",
