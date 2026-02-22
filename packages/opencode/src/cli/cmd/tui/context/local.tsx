@@ -224,8 +224,8 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           const provider = sync.data.provider.find((x) => x.id === value.providerID)
           const info = provider?.models[value.modelID]
           return {
-            provider: provider?.name ?? value.providerID,
-            model: info?.name ?? value.modelID,
+            provider: (provider?.name ?? value.providerID).toLowerCase(),
+            model: (info?.name ?? value.modelID).toLowerCase(),
             reasoning: info?.capabilities?.reasoning ?? false,
           }
         }),
