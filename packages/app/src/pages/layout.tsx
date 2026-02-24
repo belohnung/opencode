@@ -1996,6 +1996,14 @@ export default function Layout(props: ParentProps) {
     },
     setHoverSession,
   }
+  const duplicateProjectNames = createMemo(() => {
+    const counts = new Map<string, number>()
+    layout.projects.list().forEach((project) => {
+      const name = project.name || getFilename(project.worktree)
+      counts.set(name, (counts.get(name) ?? 0) + 1)
+    })
+    return counts
+  })
 
   const SidebarPanel = (panelProps: {
     project: Accessor<LocalProject | undefined>
@@ -2043,6 +2051,12 @@ export default function Layout(props: ParentProps) {
       return item.vcs === "git" || layout.sidebar.workspaces(item.worktree)()
     })
     const homedir = createMemo(() => globalSync.data.path.home)
+    const showWorktree = createMemo(() => {
+      const project = panelProps.project
+      if (!project) return false
+      const name = project.name || getFilename(project.worktree)
+      return (duplicateProjectNames().get(name) ?? 0) > 1
+    })
 
     return (
       <div
