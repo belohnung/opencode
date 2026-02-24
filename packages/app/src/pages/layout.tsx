@@ -1940,10 +1940,10 @@ export default function Layout(props: ParentProps) {
   }
   const duplicateProjectNames = createMemo(() => {
     const counts = new Map<string, number>()
-    layout.projects.list().forEach((project) => {
-      const name = project.name || getFilename(project.worktree)
+    for (const project of layout.projects.list()) {
+      const name = displayName(project)
       counts.set(name, (counts.get(name) ?? 0) + 1)
-    })
+    }
     return counts
   })
 
@@ -1972,12 +1972,6 @@ export default function Layout(props: ParentProps) {
       return layout.sidebar.workspaces(project.worktree)()
     })
     const homedir = createMemo(() => globalSync.data.path.home)
-    const showWorktree = createMemo(() => {
-      const project = panelProps.project
-      if (!project) return false
-      const name = project.name || getFilename(project.worktree)
-      return (duplicateProjectNames().get(name) ?? 0) > 1
-    })
 
     return (
       <div
@@ -2009,7 +2003,7 @@ export default function Layout(props: ParentProps) {
                       stopPropagation
                     />
 
-                    <Show when={showWorktree()}>
+                    <Show when={(duplicateProjectNames().get(displayName(p())) ?? 0) > 1}>
                       <Tooltip
                         placement="bottom"
                         gutter={2}
