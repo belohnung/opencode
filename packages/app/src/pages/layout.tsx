@@ -1938,6 +1938,14 @@ export default function Layout(props: ParentProps) {
     },
     setHoverSession,
   }
+  const duplicateProjectNames = createMemo(() => {
+    const counts = new Map<string, number>()
+    for (const project of layout.projects.list()) {
+      const name = displayName(project)
+      counts.set(name, (counts.get(name) ?? 0) + 1)
+    }
+    return counts
+  })
 
   const SidebarPanel = (panelProps: { project: LocalProject | undefined; mobile?: boolean; merged?: boolean }) => {
     const merged = createMemo(() => panelProps.mobile || (panelProps.merged ?? layout.sidebar.opened()))
@@ -1995,20 +2003,22 @@ export default function Layout(props: ParentProps) {
                       stopPropagation
                     />
 
-                    <Tooltip
-                      placement="bottom"
-                      gutter={2}
-                      value={p().worktree}
-                      class="shrink-0"
-                      contentStyle={{
-                        "max-width": "640px",
-                        transform: "translate3d(52px, 0, 0)",
-                      }}
-                    >
-                      <span class="text-12-regular text-text-base truncate select-text">
-                        {p().worktree.replace(homedir(), "~")}
-                      </span>
-                    </Tooltip>
+                    <Show when={(duplicateProjectNames().get(displayName(p())) ?? 0) > 1}>
+                      <Tooltip
+                        placement="bottom"
+                        gutter={2}
+                        value={p().worktree}
+                        class="shrink-0"
+                        contentStyle={{
+                          "max-width": "640px",
+                          transform: "translate3d(52px, 0, 0)",
+                        }}
+                      >
+                        <span class="text-12-regular text-text-base truncate select-text">
+                          {p().worktree.replace(homedir(), "~")}
+                        </span>
+                      </Tooltip>
+                    </Show>
                   </div>
 
                   <DropdownMenu modal={!sidebarHovering()}>
