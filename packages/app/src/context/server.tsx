@@ -8,6 +8,22 @@ type StoredProject = { worktree: string; expanded: boolean }
 type StoredServer = string | ServerConnection.HttpBase | ServerConnection.Http
 const HEALTH_POLL_INTERVAL_MS = 10_000
 
+function drop(list: string[], directory: string) {
+  return list.filter((item) => item !== directory)
+}
+
+function append(list: StoredProject[], directories: string[]) {
+  const seen = new Set(list.map((item) => item.worktree))
+  return [
+    ...list,
+    ...directories.flatMap((worktree) => {
+      if (seen.has(worktree)) return []
+      seen.add(worktree)
+      return [{ worktree, expanded: true }]
+    }),
+  ]
+}
+
 export function normalizeServerUrl(input: string) {
   const trimmed = input.trim()
   if (!trimmed) return
@@ -102,6 +118,7 @@ export const { use: useServer, provider: ServerProvider } = createSimpleContext(
       createStore({
         list: [] as StoredServer[],
         projects: {} as Record<string, StoredProject[]>,
+        hiddenProjects: {} as Record<string, string[]>,
         lastProject: {} as Record<string, string>,
       }),
     )
@@ -208,6 +225,7 @@ export const { use: useServer, provider: ServerProvider } = createSimpleContext(
 
     const origin = createMemo(() => projectsKey(state.active))
     const projectsList = createMemo(() => store.projects[origin()] ?? [])
+    const hiddenProjects = createMemo(() => store.hiddenProjects[origin()] ?? [])
     const current: Accessor<ServerConnection.Any | undefined> = createMemo(
       () => allServers().find((s) => ServerConnection.key(s) === state.active) ?? allServers()[0],
     )
@@ -237,22 +255,45 @@ export const { use: useServer, provider: ServerProvider } = createSimpleContext(
       remove,
       projects: {
         list: projectsList,
+        hidden: hiddenProjects,
+        seed(directories: string[]) {
+          const key = origin()
+          if (!key) return
+          const hidden = new Set(store.hiddenProjects[key] ?? [])
+          const next = directories.filter((directory) => !hidden.has(directory))
+          if (next.length === 0) return
+          setStore("projects", key, append(store.projects[key] ?? [], next))
+        },
         open(directory: string) {
           const key = origin()
           if (!key) return
           const current = store.projects[key] ?? []
-          if (current.find((x) => x.worktree === directory)) return
-          setStore("projects", key, [{ worktree: directory, expanded: true }, ...current])
+          const existing = current.find((x) => x.worktree === directory)
+          const hidden = store.hiddenProjects[key] ?? []
+          batch(() => {
+            if (!existing) {
+              setStore("projects", key, [{ worktree: directory, expanded: true }, ...current])
+            }
+            if (hidden.includes(directory)) {
+              setStore("hiddenProjects", key, drop(hidden, directory))
+            }
+          })
         },
         close(directory: string) {
           const key = origin()
           if (!key) return
           const current = store.projects[key] ?? []
-          setStore(
-            "projects",
-            key,
-            current.filter((x) => x.worktree !== directory),
-          )
+          const hidden = store.hiddenProjects[key] ?? []
+          batch(() => {
+            setStore(
+              "projects",
+              key,
+              current.filter((x) => x.worktree !== directory),
+            )
+            if (!hidden.includes(directory)) {
+              setStore("hiddenProjects", key, [directory, ...hidden])
+            }
+          })
         },
         expand(directory: string) {
           const key = origin()

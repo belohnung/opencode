@@ -2003,7 +2003,7 @@ export default function Layout(props: ParentProps) {
                       stopPropagation
                     />
 
-                    <Show when={(duplicateProjectNames().get(displayName(p())) ?? 0) > 1}>
+                    <Show when={(duplicateProjectNames().get(displayName(p)) ?? 0) > 1}>
                       <Tooltip
                         placement="bottom"
                         gutter={2}

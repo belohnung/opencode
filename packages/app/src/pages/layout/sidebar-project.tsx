@@ -310,6 +310,11 @@ export const SortableProject = (props: {
     setState("open", false)
   })
 
+  createEffect(() => {
+    if (!selected() && !state.open) return
+    void globalSync.project.loadSessions(props.project.worktree)
+  })
+
   const label = (directory: string) => {
     const [data] = globalSync.child(directory, { bootstrap: false })
     const kind =
