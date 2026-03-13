@@ -1,6 +1,6 @@
 export namespace Locale {
   export function titlecase(str: string) {
-    return str
+    return str.toLowerCase().replace(/(^|\s)\S/g, (x) => x.toUpperCase())
   }
 
   export function time(input: number): string {

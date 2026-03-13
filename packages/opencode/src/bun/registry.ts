@@ -37,8 +37,22 @@ export namespace PackageRegistry {
     }
 
     const isRange = /[\s^~*xX<>|=]/.test(cachedVersion)
-    if (isRange) return !semver.satisfies(latestVersion, cachedVersion)
+    if (isRange) {
+      const range = semver.validRange(cachedVersion)
+      if (!range) {
+        log.warn("Invalid cached version range, treating as outdated", { pkg, cachedVersion, latestVersion })
+        return true
+      }
+      return !semver.satisfies(latestVersion, range)
+    }
 
-    return semver.lt(cachedVersion, latestVersion)
+    const cached = semver.valid(cachedVersion)
+    const latest = semver.valid(latestVersion)
+    if (!cached || !latest) {
+      log.warn("Invalid version value, treating as outdated", { pkg, cachedVersion, latestVersion })
+      return true
+    }
+
+    return semver.lt(cached, latest)
   }
 }
