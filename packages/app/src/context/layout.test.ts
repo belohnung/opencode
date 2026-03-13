@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { createRoot, createSignal } from "solid-js"
-import { createSessionKeyReader, ensureSessionKey, pruneSessionKeys } from "./layout"
+import { createSessionKeyReader, discoverProjects, ensureSessionKey, pruneSessionKeys } from "./layout"
 
 describe("layout session-key helpers", () => {
   test("couples touch and scroll seed in order", () => {
@@ -65,5 +65,34 @@ describe("pruneSessionKeys", () => {
     })
 
     expect(drop).toEqual([])
+  })
+})
+
+describe("discoverProjects", () => {
+  test("returns unseen global projects by recency", () => {
+    const next = discoverProjects(
+      [{ worktree: "/a" }],
+      ["/c"],
+      [
+        { worktree: "/b", time: { created: 1, updated: 5 } },
+        { worktree: "/c", time: { created: 2, updated: 6 } },
+        { worktree: "/d", time: { created: 3, updated: 4 } },
+      ],
+    )
+
+    expect(next).toEqual(["/b", "/d"])
+  })
+
+  test("ignores already stored projects", () => {
+    const next = discoverProjects(
+      [{ worktree: "/a" }, { worktree: "/b" }],
+      [],
+      [
+        { worktree: "/b", time: { created: 1, updated: 2 } },
+        { worktree: "/c", time: { created: 3, updated: 4 } },
+      ],
+    )
+
+    expect(next).toEqual(["/c"])
   })
 })
