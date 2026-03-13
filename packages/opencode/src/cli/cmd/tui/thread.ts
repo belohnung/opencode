@@ -12,6 +12,7 @@ import { Filesystem } from "@/util/filesystem"
 import { win32DisableProcessedInput, win32InstallCtrlCGuard } from "./win32"
 import { TuiConfig } from "@/config/tui"
 import { Instance } from "@/project/instance"
+import type { EventSource as Stream } from "./context/sdk"
 
 declare global {
   const OPENCODE_WORKER_PATH: string
@@ -37,9 +38,9 @@ function createWorkerFetch(client: RpcClient): typeof fetch {
   return fn as typeof fetch
 }
 
-function createEventSource(client: RpcClient): EventSource {
+function createEventSource(client: RpcClient): Stream {
   return {
-    on: (handler) => client.on<Event>("event", handler),
+    on: (handler) => client.on("event", handler),
     setWorkspace: (workspaceID) => {
       void client.call("setWorkspace", { workspaceID })
     },
