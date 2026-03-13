@@ -106,6 +106,7 @@ export const dict = {
   "ui.tool.todos.read": "读取待办",
   "ui.tool.questions": "问题",
   "ui.tool.agent": "{{type}} 智能体",
+  "ui.tool.agent.default": "智能体",
 
   "ui.common.file.one": "个文件",
   "ui.common.file.other": "个文件",
@@ -129,6 +130,8 @@ export const dict = {
   "ui.message.collapse": "收起消息",
   "ui.message.copy": "复制",
   "ui.message.copyMessage": "复制消息",
+  "ui.message.forkMessage": "分叉到新会话",
+  "ui.message.revertMessage": "重置到此点",
   "ui.message.copyResponse": "复制回复",
   "ui.message.copied": "已复制！",
   "ui.message.interrupted": "已中断",

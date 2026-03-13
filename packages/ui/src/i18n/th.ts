@@ -103,6 +103,7 @@ export const dict = {
   "ui.tool.todos.read": "อ่านรายการงาน",
   "ui.tool.questions": "คำถาม",
   "ui.tool.agent": "เอเจนต์ {{type}}",
+  "ui.tool.agent.default": "เอเจนต์",
 
   "ui.common.file.one": "ไฟล์",
   "ui.common.file.other": "ไฟล์",
@@ -126,6 +127,8 @@ export const dict = {
   "ui.message.collapse": "ย่อข้อความ",
   "ui.message.copy": "คัดลอก",
   "ui.message.copyMessage": "คัดลอกข้อความ",
+  "ui.message.forkMessage": "แตกแขนงไปยังเซสชันใหม่",
+  "ui.message.revertMessage": "รีเซ็ตไปยังจุดนี้",
   "ui.message.copyResponse": "คัดลอกคำตอบ",
   "ui.message.copied": "คัดลอกแล้ว!",
   "ui.message.interrupted": "ถูกขัดจังหวะ",

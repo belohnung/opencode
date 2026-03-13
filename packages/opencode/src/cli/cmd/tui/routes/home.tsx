@@ -1,12 +1,12 @@
 import { Prompt, type PromptRef } from "@tui/component/prompt"
-import { createMemo, Match, onMount, Show, Switch } from "solid-js"
+import { createEffect, createMemo, Match, on, onMount, Show, Switch } from "solid-js"
 import { useTheme } from "@tui/context/theme"
 import { useKeybind } from "@tui/context/keybind"
-import { Logo } from "../component/logo"
 import { Tips } from "../component/tips"
+import { GifRenderer } from "../component/gif-renderer"
 import { Locale } from "@/util/locale"
 import { useSync } from "../context/sync"
-import { Toast } from "../ui/toast"
+import { Toast } from "@tui/ui/toast"
 import { useArgs } from "../context/args"
 import { useDirectory } from "../context/directory"
 import { useRouteData } from "@tui/context/route"
@@ -14,6 +14,8 @@ import { usePromptRef } from "../context/prompt"
 import { Installation } from "@/installation"
 import { useKV } from "../context/kv"
 import { useCommandDialog } from "../component/dialog-command"
+import { useLocal } from "../context/local"
+import { gifAssets } from "../assets"
 
 // TODO: what is the best way to do this?
 let once = false
@@ -76,6 +78,7 @@ export function Home() {
 
   let prompt: PromptRef
   const args = useArgs()
+  const local = useLocal()
   onMount(() => {
     if (once) return
     if (route.initialPrompt) {
@@ -84,9 +87,21 @@ export function Home() {
     } else if (args.prompt) {
       prompt.set({ input: args.prompt, parts: [] })
       once = true
-      prompt.submit()
     }
   })
+
+  // Wait for sync and model store to be ready before auto-submitting --prompt
+  createEffect(
+    on(
+      () => sync.ready && local.model.ready,
+      (ready) => {
+        if (!ready) return
+        if (!args.prompt) return
+        if (prompt.current?.input !== args.prompt) return
+        prompt.submit()
+      },
+    ),
+  )
   const directory = useDirectory()
 
   const keybind = useKeybind()
@@ -97,7 +112,7 @@ export function Home() {
         <box flexGrow={1} minHeight={0} />
         <box height={4} minHeight={0} flexShrink={1} />
         <box flexShrink={0}>
-          <Logo />
+          <GifRenderer path={gifAssets["happy-cat"]} width={60} height={30} />
         </box>
         <box height={1} minHeight={0} flexShrink={1} />
         <box width="100%" maxWidth={75} zIndex={1000} paddingTop={1} flexShrink={0}>
@@ -107,6 +122,7 @@ export function Home() {
               promptRef.set(r)
             }}
             hint={Hint}
+            workspaceID={route.workspaceID}
           />
         </box>
         <box height={4} minHeight={0} width="100%" maxWidth={75} alignItems="center" paddingTop={3} flexShrink={1}>
