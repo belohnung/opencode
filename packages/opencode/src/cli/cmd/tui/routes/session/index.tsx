@@ -1362,7 +1362,6 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
     if (!text && !thinking) return undefined
     return kaomoji(text, thinking || undefined)
   })
-
   const TPS = createMemo(() => {
     if (!final()) return 0
     if (!props.message.time.completed) return 0
@@ -1370,7 +1369,7 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
     const assistantMessages: AssistantMessage[] = messages().filter(
       (msg) => msg.role === "assistant" && msg.id !== props.message.id,
     ) as AssistantMessage[]
-    const allParts = assistantMessages.flatMap((msg) => getParts(msg.id))
+  const allParts = assistantMessages.flatMap((msg) => getParts(msg.id))
 
     const INVALID_REASONING_TEXTS = ["[REDACTED]", "", null, undefined] as const
 
@@ -1415,7 +1414,7 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
       },
       { output: 0, reasoning: 0 },
     )
-    const totalTokens = totals.reasoning + totals.output
+  const totalTokens = totals.reasoning + totals.output
 
     if (totalTokens === 0) return 0
 
@@ -1486,6 +1485,9 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
               </Show>
               <Show when={props.message.error?.name === "MessageAbortedError"}>
                 <span style={{ fg: theme.textMuted }}> · interrupted</span>
+              </Show>
+              <Show when={Flag.OPENCODE_EXPERIMENTAL_TPS && TPS()}>
+                <span style={{ fg: theme.textMuted }}> · {TPS()} tps</span>
               </Show>
             </text>
           </box>
