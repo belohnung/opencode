@@ -1369,7 +1369,7 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
     const assistantMessages: AssistantMessage[] = messages().filter(
       (msg) => msg.role === "assistant" && msg.id !== props.message.id,
     ) as AssistantMessage[]
-  const allParts = assistantMessages.flatMap((msg) => getParts(msg.id))
+    const allParts = assistantMessages.flatMap((msg) => getParts(msg.id))
 
     const INVALID_REASONING_TEXTS = ["[REDACTED]", "", null, undefined] as const
 
@@ -1414,7 +1414,7 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
       },
       { output: 0, reasoning: 0 },
     )
-  const totalTokens = totals.reasoning + totals.output
+    const totalTokens = totals.reasoning + totals.output
 
     if (totalTokens === 0) return 0
 
