@@ -8,6 +8,7 @@ import { Icon } from "@opencode-ai/ui/icon"
 import { usePlatform } from "@/context/platform"
 import { DateTime } from "luxon"
 import { useDialog } from "@opencode-ai/ui/context/dialog"
+import { getFilename } from "@opencode-ai/util/path"
 import { DialogSelectDirectory } from "@/components/dialog-select-directory"
 import { DialogSelectServer } from "@/components/dialog-select-server"
 import { useServer } from "@/context/server"
@@ -29,6 +30,19 @@ export default function Home() {
       .sort((a, b) => (b.time.updated ?? b.time.created) - (a.time.updated ?? a.time.created))
       .slice(0, 5)
   })
+  const duplicateNames = createMemo(() => {
+    const counts = new Map<string, number>()
+    sync.data.project.forEach((project) => {
+      const name = project.name || getFilename(project.worktree)
+      counts.set(name, (counts.get(name) ?? 0) + 1)
+    })
+    return counts
+  })
+  const projectLabel = (project: (typeof sync.data.project)[number]) => {
+    const name = project.name || getFilename(project.worktree)
+    if ((duplicateNames().get(name) ?? 0) > 1) return project.worktree.replace(homedir(), "~")
+    return name
+  }
 
   const serverDotClass = createMemo(() => {
     const healthy = server.healthy()
@@ -103,7 +117,7 @@ export default function Home() {
                     class="text-14-mono text-left justify-between px-3"
                     onClick={() => openProject(project.worktree)}
                   >
-                    {project.worktree.replace(homedir(), "~")}
+                    {projectLabel(project)}
                     <div class="text-14-regular text-text-weak">
                       {DateTime.fromMillis(project.time.updated ?? project.time.created).toRelative()}
                     </div>
