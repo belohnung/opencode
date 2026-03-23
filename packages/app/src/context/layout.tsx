@@ -59,6 +59,19 @@ export function ensureSessionKey(key: string, touch: (key: string) => void, seed
   return key
 }
 
+export function discoverProjects(
+  stored: Array<{ worktree: string }>,
+  hidden: string[],
+  global: Array<Pick<Project, "worktree" | "time">>,
+) {
+  const seen = new Set([...stored.map((project) => project.worktree), ...hidden])
+  return global
+    .filter((project) => !!project.worktree && !seen.has(project.worktree))
+    .slice()
+    .sort((a, b) => (b.time.updated ?? b.time.created) - (a.time.updated ?? a.time.created))
+    .map((project) => project.worktree)
+}
+
 export function createSessionKeyReader(sessionKey: string | Accessor<string>, ensure: (key: string) => void) {
   const key = typeof sessionKey === "function" ? sessionKey : () => sessionKey
   return () => {
@@ -476,6 +489,13 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
           if (project.expanded) server.projects.expand(root)
         }
       })
+    })
+
+    createEffect(() => {
+      if (!globalSync.ready) return
+      const next = discoverProjects(server.projects.list(), server.projects.hidden(), globalSync.data.project)
+      if (next.length === 0) return
+      server.projects.seed(next)
     })
 
     const enriched = createMemo(() => server.projects.list().map(enrich))

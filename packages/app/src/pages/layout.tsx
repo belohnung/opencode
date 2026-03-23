@@ -2104,20 +2104,22 @@ export default function Layout(props: ParentProps) {
                     stopPropagation
                   />
 
-                  <Tooltip
-                    placement="bottom"
-                    gutter={2}
-                    value={worktree()}
-                    class="shrink-0"
-                    contentStyle={{
-                      "max-width": "640px",
-                      transform: "translate3d(52px, 0, 0)",
-                    }}
-                  >
-                    <span class="text-12-regular text-text-base truncate select-text">
-                      {worktree().replace(homedir(), "~")}
-                    </span>
-                  </Tooltip>
+                  <Show when={(duplicateProjectNames().get(projectName()) ?? 0) > 1}>
+                    <Tooltip
+                      placement="bottom"
+                      gutter={2}
+                      value={worktree()}
+                      class="shrink-0"
+                      contentStyle={{
+                        "max-width": "640px",
+                        transform: "translate3d(52px, 0, 0)",
+                      }}
+                    >
+                      <span class="text-12-regular text-text-base truncate select-text">
+                        {worktree().replace(homedir(), "~")}
+                      </span>
+                    </Tooltip>
+                  </Show>
                 </div>
 
                 <DropdownMenu modal={!sidebarHovering()}>
