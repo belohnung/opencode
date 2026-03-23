@@ -9,11 +9,10 @@ import { Log } from "@/util/log"
 import { withTimeout } from "@/util/timeout"
 import { withNetworkOptions, resolveNetworkOptions } from "@/cli/network"
 import { Filesystem } from "@/util/filesystem"
-import type { Event } from "@opencode-ai/sdk/v2"
-import type { EventSource } from "./context/sdk"
 import { win32DisableProcessedInput, win32InstallCtrlCGuard } from "./win32"
 import { TuiConfig } from "@/config/tui"
 import { Instance } from "@/project/instance"
+import type { EventSource as Stream } from "./context/sdk"
 
 declare global {
   const OPENCODE_WORKER_PATH: string
@@ -39,13 +38,27 @@ function createWorkerFetch(client: RpcClient): typeof fetch {
   return fn as typeof fetch
 }
 
-function createEventSource(client: RpcClient): EventSource {
+function createEventSource(client: RpcClient): Stream {
   return {
-    on: (handler) => client.on<Event>("event", handler),
+    on: (handler) => client.on("event", handler),
     setWorkspace: (workspaceID) => {
       void client.call("setWorkspace", { workspaceID })
     },
   }
+}
+
+function shouldUseAlwaysOnDefaults(opts: Awaited<ReturnType<typeof resolveNetworkOptions>>) {
+  if (process.argv.includes("--port")) return false
+  if (process.argv.includes("--hostname")) return false
+  if (process.argv.includes("--mdns")) return false
+  if (process.argv.includes("--mdns-domain")) return false
+  if (process.argv.includes("--cors")) return false
+  if (opts.port !== 0) return false
+  if (opts.hostname !== "127.0.0.1") return false
+  if (opts.mdns) return false
+  if (opts.mdnsDomain !== "opencode.local") return false
+  if (opts.cors.length > 0) return false
+  return true
 }
 
 async function target() {
@@ -173,26 +186,17 @@ export const TuiThreadCommand = cmd({
         fn: () => TuiConfig.get(),
       })
 
-      const network = await resolveNetworkOptions(args)
-      const external =
-        process.argv.includes("--port") ||
-        process.argv.includes("--hostname") ||
-        process.argv.includes("--mdns") ||
-        network.mdns ||
-        network.port !== 0 ||
-        network.hostname !== "127.0.0.1"
-
-      const transport = external
+      const networkOpts = await resolveNetworkOptions(args)
+      const opts = shouldUseAlwaysOnDefaults(networkOpts)
         ? {
-            url: (await client.call("server", network)).url,
-            fetch: undefined,
-            events: undefined,
+            ...networkOpts,
+            port: 0,
+            hostname: "0.0.0.0",
+            mdns: true,
           }
-        : {
-            url: "http://opencode.internal",
-            fetch: createWorkerFetch(client),
-            events: createEventSource(client),
-          }
+        : networkOpts
+      const server = await client.call("server", opts)
+      const url = server.url
 
       setTimeout(() => {
         client.call("checkUpgrade", { directory: cwd }).catch(() => {})
@@ -200,11 +204,9 @@ export const TuiThreadCommand = cmd({
 
       try {
         await tui({
-          url: transport.url,
+          url,
           config,
           directory: cwd,
-          fetch: transport.fetch,
-          events: transport.events,
           args: {
             continue: args.continue,
             sessionID: args.session,

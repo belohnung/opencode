@@ -1996,6 +1996,14 @@ export default function Layout(props: ParentProps) {
     },
     setHoverSession,
   }
+  const duplicateProjectNames = createMemo(() => {
+    const counts = new Map<string, number>()
+    for (const project of layout.projects.list()) {
+      const name = displayName(project)
+      counts.set(name, (counts.get(name) ?? 0) + 1)
+    }
+    return counts
+  })
 
   const SidebarPanel = (panelProps: {
     project: Accessor<LocalProject | undefined>

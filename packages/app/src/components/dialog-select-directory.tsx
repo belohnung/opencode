@@ -271,6 +271,13 @@ export function DialogSelectDirectory(props: DialogSelectDirectoryProps) {
   const start = createMemo(
     () => sync.data.path.home || sync.data.path.directory || fallbackPath()?.home || fallbackPath()?.directory,
   )
+  const recent = createMemo(() => {
+    const paths = sync.data.project
+      .slice()
+      .sort((a, b) => (b.time.updated ?? b.time.created) - (a.time.updated ?? a.time.created))
+      .map((project) => project.worktree)
+    return Array.from(new Set(paths)).map((absolute) => toRow(absolute, home(), "recent"))
+  })
 
   const directories = useDirectorySearch({
     sdk,
@@ -311,9 +318,11 @@ export function DialogSelectDirectory(props: DialogSelectDirectoryProps) {
   })
 
   const items = async (value: string) => {
+    const query = cleanInput(value)
+    const picks = query ? fuzzysort.go(query, recent(), { key: "search", limit: 50 }).map((item) => item.obj) : recent()
     const results = await directories(value)
     const directoryRows = results.map((absolute) => toRow(absolute, home(), "folders"))
-    return uniqueRows([...recentProjects(), ...directoryRows])
+    return uniqueRows([...(query ? picks : recentProjects()), ...directoryRows]).slice(0, 50)
   }
 
   function resolve(absolute: string) {

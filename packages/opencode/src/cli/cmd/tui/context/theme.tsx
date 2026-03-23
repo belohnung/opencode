@@ -27,6 +27,7 @@ import onedark from "./theme/one-dark.json" with { type: "json" }
 import opencode from "./theme/opencode.json" with { type: "json" }
 import orng from "./theme/orng.json" with { type: "json" }
 import lucentOrng from "./theme/lucent-orng.json" with { type: "json" }
+import piOrng from "./theme/pi-orng.json" with { type: "json" }
 import palenight from "./theme/palenight.json" with { type: "json" }
 import rosepine from "./theme/rosepine.json" with { type: "json" }
 import solarized from "./theme/solarized.json" with { type: "json" }
@@ -36,6 +37,7 @@ import vercel from "./theme/vercel.json" with { type: "json" }
 import vesper from "./theme/vesper.json" with { type: "json" }
 import zenburn from "./theme/zenburn.json" with { type: "json" }
 import carbonfox from "./theme/carbonfox.json" with { type: "json" }
+import pink from "./theme/pink.json" with { type: "json" }
 import { useKV } from "./kv"
 import { useRenderer } from "@opentui/solid"
 import { createStore, produce } from "solid-js/store"
@@ -163,6 +165,7 @@ export const DEFAULT_THEMES: Record<string, ThemeJson> = {
   opencode,
   orng,
   ["lucent-orng"]: lucentOrng,
+  ["pi-orng"]: piOrng,
   palenight,
   rosepine,
   solarized,
@@ -172,6 +175,7 @@ export const DEFAULT_THEMES: Record<string, ThemeJson> = {
   vercel,
   zenburn,
   carbonfox,
+  pink,
 }
 
 function resolveTheme(theme: ThemeJson, mode: "dark" | "light") {

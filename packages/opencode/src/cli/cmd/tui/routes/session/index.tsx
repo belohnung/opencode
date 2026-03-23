@@ -32,6 +32,7 @@ import { Prompt, type PromptRef } from "@tui/component/prompt"
 import type { AssistantMessage, Part, ToolPart, UserMessage, TextPart, ReasoningPart } from "@opencode-ai/sdk/v2"
 import { useLocal } from "@tui/context/local"
 import { Locale } from "@/util/locale"
+import { kaomoji } from "@tui/util/sentiment"
 import type { Tool } from "@/tool/tool"
 import type { ReadTool } from "@/tool/read"
 import type { WriteTool } from "@/tool/write"
@@ -74,6 +75,7 @@ import { Footer } from "./footer.tsx"
 import { usePromptRef } from "../../context/prompt"
 import { useExit } from "../../context/exit"
 import { Filesystem } from "@/util/filesystem"
+import { DialogSubagent } from "./dialog-subagent.tsx"
 import { Global } from "@/global"
 import { PermissionPrompt } from "./permission"
 import { QuestionPrompt } from "./question"
@@ -1103,7 +1105,7 @@ export function Session() {
                             <box
                               paddingTop={1}
                               paddingBottom={1}
-                              paddingLeft={2}
+                              paddingLeft={1}
                               backgroundColor={hover() ? theme.backgroundElement : theme.backgroundPanel}
                             >
                               <text fg={theme.textMuted}>{revert()!.reverted.length} message reverted</text>
@@ -1253,62 +1255,59 @@ function UserMessage(props: {
       <Show when={text()}>
         <box
           id={props.message.id}
-          border={["left"]}
-          borderColor={color()}
-          customBorderChars={SplitBorder.customBorderChars}
           marginTop={props.index === 0 ? 0 : 1}
+          marginBottom={1}
+          onMouseOver={() => {
+            setHover(true)
+          }}
+          onMouseOut={() => {
+            setHover(false)
+          }}
+          onMouseUp={props.onMouseUp}
+          flexShrink={0}
         >
           <box
-            onMouseOver={() => {
-              setHover(true)
-            }}
-            onMouseOut={() => {
-              setHover(false)
-            }}
-            onMouseUp={props.onMouseUp}
-            paddingTop={1}
-            paddingBottom={1}
-            paddingLeft={2}
+            flexDirection="row"
             backgroundColor={hover() ? theme.backgroundElement : theme.backgroundPanel}
-            flexShrink={0}
+            alignSelf="flex-start"
+            paddingRight={1}
           >
+            <text fg={color()}>󰅂 </text>
             <text fg={theme.text}>{text()?.text}</text>
-            <Show when={files().length}>
-              <box flexDirection="row" paddingBottom={metadataVisible() ? 1 : 0} paddingTop={1} gap={1} flexWrap="wrap">
-                <For each={files()}>
-                  {(file) => {
-                    const bg = createMemo(() => {
-                      if (file.mime.startsWith("image/")) return theme.accent
-                      if (file.mime === "application/pdf") return theme.primary
-                      return theme.secondary
-                    })
-                    return (
-                      <text fg={theme.text}>
-                        <span style={{ bg: bg(), fg: theme.background }}> {MIME_BADGE[file.mime] ?? file.mime} </span>
-                        <span style={{ bg: theme.backgroundElement, fg: theme.textMuted }}> {file.filename} </span>
-                      </text>
-                    )
-                  }}
-                </For>
-              </box>
-            </Show>
-            <Show
-              when={queued()}
-              fallback={
-                <Show when={ctx.showTimestamps()}>
-                  <text fg={theme.textMuted}>
-                    <span style={{ fg: theme.textMuted }}>
-                      {Locale.todayTimeOrDateTime(props.message.time.created)}
-                    </span>
-                  </text>
-                </Show>
-              }
-            >
-              <text fg={theme.textMuted}>
-                <span style={{ bg: color(), fg: queuedFg(), bold: true }}> QUEUED </span>
-              </text>
-            </Show>
           </box>
+          <Show when={files().length}>
+            <box flexDirection="row" paddingBottom={metadataVisible() ? 1 : 0} paddingTop={1} gap={1} flexWrap="wrap">
+              <For each={files()}>
+                {(file) => {
+                  const bg = createMemo(() => {
+                    if (file.mime.startsWith("image/")) return theme.accent
+                    if (file.mime === "application/pdf") return theme.primary
+                    return theme.secondary
+                  })
+                  return (
+                    <text fg={theme.text}>
+                      <span style={{ bg: bg(), fg: theme.background }}> {MIME_BADGE[file.mime] ?? file.mime} </span>
+                      <span style={{ bg: theme.backgroundElement, fg: theme.textMuted }}> {file.filename} </span>
+                    </text>
+                  )
+                }}
+              </For>
+            </box>
+          </Show>
+          <Show
+            when={queued()}
+            fallback={
+              <Show when={ctx.showTimestamps()}>
+                <text fg={theme.textMuted}>
+                  <span style={{ fg: theme.textMuted }}>{Locale.todayTimeOrDateTime(props.message.time.created)}</span>
+                </text>
+              </Show>
+            }
+          >
+            <text fg={theme.textMuted}>
+              <span style={{ bg: color(), fg: queuedFg(), bold: true }}> QUEUED </span>
+            </text>
+          </Show>
         </box>
       </Show>
       <Show when={compaction()}>
@@ -1330,6 +1329,10 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
   const sync = useSync()
   const messages = createMemo(() => sync.data.message[props.message.sessionID] ?? [])
 
+  function getParts(id: string) {
+    return sync.data.part[id] ?? []
+  }
+
   const final = createMemo(() => {
     return props.message.finish && !["tool-calls", "unknown"].includes(props.message.finish)
   })
@@ -1343,6 +1346,85 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
   })
 
   const keybind = useKeybind()
+  const sentiment = createMemo(() => {
+    const text = props.parts
+      .filter((p) => p.type === "text")
+      .map((p) => p.text)
+      .join("\n")
+      .trim()
+      .slice(-500)
+    const thinking = props.parts
+      .filter((p) => p.type === "reasoning")
+      .map((p) => p.text)
+      .join("\n")
+      .trim()
+      .slice(-750)
+    if (!text && !thinking) return undefined
+    return kaomoji(text, thinking || undefined)
+  })
+
+  const TPS = createMemo(() => {
+    if (!final()) return 0
+    if (!props.message.time.completed) return 0
+    if (!Flag.OPENCODE_EXPERIMENTAL_TPS) return 0
+    const assistantMessages: AssistantMessage[] = messages().filter(
+      (msg) => msg.role === "assistant" && msg.id !== props.message.id,
+    ) as AssistantMessage[]
+    const allParts = assistantMessages.flatMap((msg) => getParts(msg.id))
+
+    const INVALID_REASONING_TEXTS = ["[REDACTED]", "", null, undefined] as const
+
+    // Filter for actual streaming parts (reasoning + text), exclude tool/step markers
+    const streamingParts = allParts.filter((part): part is TextPart | ReasoningPart => {
+      // Only text and reasoning parts have streaming time data
+      if (part.type !== "text" && part.type !== "reasoning") return false
+
+      // Skip parts without valid timestamps
+      if (!part.time?.start || !part.time?.end) return false
+
+      // Include text parts with content
+      if (part.type === "text" && (part.text?.trim().length ?? 0) > 0) return true
+
+      // Include reasoning parts with valid (non-empty) text
+      if (part.type === "reasoning" && !INVALID_REASONING_TEXTS.includes(part.text as any)) {
+        return true
+      }
+
+      return false
+    })
+
+    if (streamingParts.length === 0) return 0
+
+    // Sum individual part durations (excludes tool execution time between parts)
+    let totalStreamingTimeMs = 0
+    let hasValidReasoning = false
+
+    for (const part of streamingParts) {
+      totalStreamingTimeMs += part.time!.end! - part.time!.start!
+      if (part.type === "reasoning") {
+        hasValidReasoning = true
+      }
+    }
+
+    if (totalStreamingTimeMs === 0) return 0
+    const totals = assistantMessages.reduce(
+      (acc, m) => {
+        acc.output += m.tokens.output
+        if (hasValidReasoning) acc.reasoning += m.tokens.reasoning
+        return acc
+      },
+      { output: 0, reasoning: 0 },
+    )
+    const totalTokens = totals.reasoning + totals.output
+
+    if (totalTokens === 0) return 0
+
+    // Calculate tokens per second
+    const totalStreamingTimeSec = totalStreamingTimeMs / 1000
+    const tokensPerSecond = totalTokens / totalStreamingTimeSec
+
+    return Number(tokensPerSecond.toFixed(2))
+  })
 
   return (
     <>
@@ -1374,7 +1456,7 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
           border={["left"]}
           paddingTop={1}
           paddingBottom={1}
-          paddingLeft={2}
+          paddingLeft={1}
           marginTop={1}
           backgroundColor={theme.backgroundPanel}
           customBorderChars={SplitBorder.customBorderChars}
@@ -1385,7 +1467,7 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
       </Show>
       <Switch>
         <Match when={props.last || final() || props.message.error?.name === "MessageAbortedError"}>
-          <box paddingLeft={3}>
+          <box paddingLeft={0}>
             <text marginTop={1}>
               <span
                 style={{
@@ -1395,8 +1477,8 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
                       : local.agent.color(props.message.agent),
                 }}
               >
-                ▣{" "}
-              </span>{" "}
+                {sentiment() ?? "󱣠"}{" "}
+              </span>
               <span style={{ fg: theme.text }}>{Locale.titlecase(props.message.mode)}</span>
               <span style={{ fg: theme.textMuted }}> · {props.message.modelID}</span>
               <Show when={duration()}>
@@ -1741,7 +1823,7 @@ function BlockTool(props: {
       border={["left"]}
       paddingTop={1}
       paddingBottom={1}
-      paddingLeft={2}
+      paddingLeft={1}
       marginTop={1}
       gap={1}
       backgroundColor={hover() ? theme.backgroundMenu : theme.backgroundPanel}
