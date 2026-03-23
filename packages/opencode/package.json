@@ -52,11 +52,8 @@
     "@types/bun": "catalog:",
     "@types/cross-spawn": "6.0.6",
     "@types/mime-types": "3.0.1",
-<<<<<<< HEAD
-    "@types/semver": "^7.5.8",
-=======
     "@types/omggif": "1.0.5",
->>>>>>> e413c1d6f (gif splash)
+    "@types/semver": "^7.5.8",
     "@types/turndown": "5.0.5",
     "@types/which": "3.0.4",
     "@types/yargs": "17.0.33",
